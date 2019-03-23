@@ -29,12 +29,12 @@ while ~isDone(videoReader)
     
     
     % Detect connected components with specified max area & find bounding boxes
-    %bbox = step(blobAnalysis, filteredFG);
+    bbox = step(blobAnalysis, filteredFG);
     % Draw bounding boxes around the detected objects
-    %result = insertShape(frame, 'Rectangle', bbox, 'Color', 'green');
+    result = insertShape(frame, 'Rectangle', bbox, 'Color', 'green');
     % Display the number of tennis balls found in the video frame
-    %numBalls = size(bbox, 1);
-    %result = insertText(result, [10 10], numBalls, 'BoxOpacity', 1, 'FontSize', 14);
+    numBalls = size(bbox, 1);
+    result = insertText(result, [10 10], numBalls, 'BoxOpacity', 1, 'FontSize', 14);
     step(videoPlayer, FG); % display the results
 end
 release(videoPlayer); % Close the video file
