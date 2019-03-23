@@ -15,3 +15,4 @@ N = V.NumberOfFrames;
 % Display one frame every 500 frames
 for i = 1:500:N
     imshow(read(V,i));
+end
