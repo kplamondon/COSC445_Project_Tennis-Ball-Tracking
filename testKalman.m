@@ -1,8 +1,8 @@
 FG_Detector = vision.ForegroundDetector('NumGaussians',5,'NumTrainingFrames', 50);
-videoReader = vision.VideoFileReader('Test2.mp4');
+videoReader = vision.VideoFileReader('assets/video_2/video2.mp4');
 
 videoPlayer = vision.VideoPlayer('Name', 'Gausian Background Subtraction');
-videoPlayer.Position(3:4) = [960,640]; % window size: [width, height]
+videoPlayer.Position(1:4) = [0,48,960,640]; % window size: [width, height]
 blobAnalysis = vision.BlobAnalysis('BoundingBoxOutputPort', true, ...
     'AreaOutputPort', false, ...
     'MaximumBlobArea', 300, 'MinimumBlobArea', 30);
