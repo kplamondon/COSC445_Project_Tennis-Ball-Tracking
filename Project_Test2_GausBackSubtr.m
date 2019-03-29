@@ -11,14 +11,18 @@ blobAnalysis = vision.BlobAnalysis('BoundingBoxOutputPort', true, ...
     'AreaOutputPort', false, 'CentroidOutputPort', false, ...
     'MaximumBlobArea', 300, 'MinimumBlobArea', 6);
 se = strel('disk', 3); % morphological filter for noise removal
-peopleDetector = vision.PeopleDetector; %used for HOG detection of players
+%peopleDetector = vision.PeopleDetector; %used for HOG detection of players
+
+%% Candidate Level - Create data structure for storing the candidates 
+candidates = zeros(1,1);
+
 while ~isDone(videoReader)
     frame = step(videoReader); % read the next video frame
     % Detect the FG in the current video frame using Gausian
     FG_gaus = step(FG_Detector, frame);
     
     %Use color segmentatation to determine another binary image
-    [BW,frame_rgbSegmented] = createMaskWhite(frame);
+    [BW,frame_rgbSegmented] = createMask1(frame);
     FG_segment = im2bw(rgb2gray(frame_rgbSegmented));
     
     %apply and oporator on both the gausian and the color segmented object
@@ -43,6 +47,10 @@ while ~isDone(videoReader)
     
     % Detect connected components with specified max area & find bounding boxes
     bbox = step(blobAnalysis, filteredFG);
+    
+    % Add to candidates
+    cat(1,bbox, candidates);
+    
     % Draw bounding boxes around the detected objects
     result = insertShape(frame, 'Rectangle', bbox, 'Color', 'green');
     %result = insertObjectAnnotation(result,'rectangle',bboxPeople,peopleScores);
