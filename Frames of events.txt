@@ -1,0 +1,20 @@
+Rough Frames of events
+
+0 - 64 (serve)
+1 - 77 (bounce)
+2 - 88
+3 - 111 (bounce)
+4 - 120 
+5 - 145 (bounce) 
+6 - 153
+7 - 197 (bounce)
+8 - 207
+9 - 230 (bounce)
+10 - 247
+11 - 270 (bounce)
+11 - 284
+12 - 308 (bounce)
+13 - 314
+14 - 340 (bounce)
+15 - 352
+16 - 367 (bounce)
