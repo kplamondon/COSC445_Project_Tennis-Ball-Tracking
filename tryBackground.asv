@@ -66,7 +66,8 @@ figure, plot(t,x,'r*','color','red','LineWidth',2,'MarkerSize',2);
 figure, plot(t,y,'r*','color','blue','LineWidth',2,'MarkerSize',2);
 
 [HEIGHT,WIDTH] = size(BG);
-v = 4;
+v = 3;
+storedIndexes = [];
 for i = v+1:1:numberOfFrames-v
     %Check and makesure we have a candidate at frmae i
     candidates_i = getCandidates(position,i);
@@ -90,25 +91,86 @@ for i = v+1:1:numberOfFrames-v
         continue;
     end
     %Create a single frame from the candidates centered on candidate_i
-    R = 12; 
+    R = 30; 
     %Loop through each candidate from this frame
-    for li=1:1:length(candidates_i)
+    for li=1:1:length(candidates_i(:,1))
         xi = candidates_i(li,2) + candidates_i(li,4)/2;
         yi = candidates_i(li,1) + candidates_i(li,3)/2;
         
-        candidateFrame = zeros(R,R);
+        candidateFrame = zeros(2*R,2*R);
+        window_candidates = [];
+        
+        %Loop through all the candidates on frames near frame i
         for j=1:1:n
             x = candidates(j,2) + candidates(j,4)/2;
             y = candidates(j,1) + candidates(j,3)/2;
             r = sqrt((x-xi)^2 + (y-yi)^2);
-            if r < R
-                candidateFrame( uint8(abs(x-xi)), uint8(abs(y-yi)) ) = 1;
-                %candidateFrame(x-3:x+3,y-3:y+3) = 1; 
+            if r < R         && length(window_candidates) == 0
+                candidateFrame( uint8(R+(x-xi)), uint8(R+(y-yi)) ) = 1;
+                new_candidate = zeros(1,6);
+                new_candidate(1:5) = candidates(j,:);
+                new_candidate(6) = r;
+                window_candidates = new_candidate;
+            elseif r < R
+                candidateFrame( uint8(R+(x-xi)), uint8(R+(y-yi)) ) = 1;
+                new_candidate = zeros(1,6);
+                new_candidate(1:5) = candidates(j,:);
+                new_candidate(6) = r;
+                window_candidates = cat(1,window_candidates,new_candidate);
             end
-            
-        end 
-        
+        end
+        %Check how many candidates are within the radius of candidate_i
+        m = sum(sum(candidateFrame));
+        [m2 c] = size(window_candidates);
+        if m < 2
+            continue;
+        end
+        %Check and see if frame i-1 and i+1 are in the window
+        frameVector = window_candidates(:,5)';
+        isSeed = sum(sum((frameVector==i-1) + (frameVector==i+1))) >= 2;
+        if ~isSeed
+            continue;
+        end
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         imshow(candidateFrame);
+        %Store the 3 points into the storedFrames vector
+%         if length(storedFrames) == 0
+%             storedIndexes = i-1;
+%         else
+%             storedFrames = cat(1,storedFrames,i-1);
+%         end
+%         storedFrames = cat(1,storedFrames,i);
+%         storedFrames = cat(1,storedFrames,i+1);
+        %We have found a seed, now we compute a tracklet using the seed
+        tracklet_top = getCandidates(window_candidates,i+1);
+        tracklet_bot = getCandidates(window_candidates,i-1);
+        %Get the three points
+        p1 = getCoordinates(window_candidates,i-1);
+        p2 = candidates_i(li,1:2);
+        p3 = getCoordinates(window_candidates,i+1);
+        %Loop through increasing frames
+        foundPoint = true;
+        delK = 3;
+        while foundPoint
+            %Calculate velocity and acceleration
+            a = (p3-p2)-(p2-p1);
+            v1 = (p2 - p1) - a/2;
+            %predict next point
+            pk = p1 + delK*v1 + 1/2*a;
+            k = i + delK;
+            disp(pk);
+            %get candidates at frame k
+            Ck = getCandidates(position,k);
+            %Check if there is a candidate within range to pk
+            for kj=1:1:length(Ck(:,1))
+                x = candidates(j,2) + candidates(j,4)/2;
+                y = candidates(j,1) + candidates(j,3)/2;
+                r = sqrt((x-xi)^2 + (y-yi)^2);
+            end
+            foundPoint = false;
+        end
+        
+        %Loop through decreasing frames
     end
     
 end
@@ -120,4 +182,10 @@ function candidates = getCandidates(positionMatrix,frame)
     indexes = positionMatrix(:,5)==frame;
     a = positionMatrix .* indexes;
     candidates = a(any(a,2),:);
+end
+function points = getCoordinates(candidateMatrix,frame)
+    indexes = candidateMatrix(:,5)==frame;
+    a = candidateMatrix .* indexes;
+    candidates = a(any(a,2),:);
+    points = candidates(:,1:2);
 end
