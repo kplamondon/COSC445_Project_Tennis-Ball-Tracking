@@ -256,7 +256,7 @@ for k = 1:length(lines_horiz)
     if lines_horiz(k).point1(1) > max_x
         max_x = lines_horiz(k).point1(1);
     elseif lines_horiz(k).point1(1) < min_x
-        min_x = lines_horiz(k).point1(2);
+        min_x = lines_horiz(k).point1(1);
     %Point 1, y
     elseif lines_horiz(k).point1(2) > max_y
         max_y = lines_horiz(k).point1(2);
@@ -267,7 +267,7 @@ for k = 1:length(lines_horiz)
     if lines_horiz(k).point2(1) > max_x
         max_x = lines_horiz(k).point2(1);
     elseif lines_horiz(k).point2(1) < min_x
-        min_x = lines_horiz(k).point2(2);
+        min_x = lines_horiz(k).point2(1);
     %Point 2, y
     elseif lines_horiz(k).point2(2) > max_y
         max_y = lines_horiz(k).point2(2);
@@ -275,15 +275,16 @@ for k = 1:length(lines_horiz)
         min_y = lines_horiz(k).point2(2);
     end
 end
-xy_horiz = [ lines_horiz(k).point1; lines_horiz(k).point2 ];
-line(xy_horiz(:,1),xy_horiz(:,2),'LineWidth',2,'Color','r');
+xy_bot = [[min_x min_y] [min_x max_y]];
+line(xy_bot(:,1),xy_bot(:,2),'LineWidth',2,'Color','r');
 
 %% Play the video to the user
 videoReader = vision.VideoFileReader(video_file);
 videoPlayer = vision.VideoPlayer('Name', 'Candidate and Event Detection');
 videoPlayer.Position(1:4) = [0 0 500 500];
-%videoWriter = VideoWriter('output.avi');
-%open(videoWriter);
+%Video Writer
+videoWriter = VideoWriter('output.avi');
+open(videoWriter);
 i = 1;
 
 while ~isDone(videoReader)
@@ -293,7 +294,7 @@ while ~isDone(videoReader)
     %Show the bounding box around the ball
     candidates = getCandidate(position,i);
     if length(candidates(:,1)) > 0
-        for j = 1:1:length(candidates)
+        for j = 1:1:length(candidates(:,1))
             if candidates(j,6) == 0
                 result = insertShape(result, 'Rectangle', candidates(:,1:4), 'Color', 'red');
             else
@@ -310,11 +311,11 @@ while ~isDone(videoReader)
     insertShape(result,'Line',[950 0 0 WIDTH], 'Color', 'blue'); %Finding the values of the net
     
     step(videoPlayer,result);
-    %writeVideo(videoWriter,result);
+    writeVideo(videoWriter,result);
     i = i + 1;
 end
 release(videoPlayer);
-%close(videoWriter);
+close(videoWriter);
 
 
 %% Functions
