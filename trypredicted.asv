@@ -233,16 +233,11 @@ k1 = 1;
 k2 = length(lines_horiz(:));
 xy_bot = [ lines_horiz(k1).point1; lines_horiz(k1).point2 ]; 
 xy_top = [ lines_horiz(k2).point1; lines_horiz(k2).point2 ]; 
-xy_left = [ lines_horiz(k1).point1; lines_horiz(k2).point1 ];
-xy_right = [ lines_horiz(k1).point2; lines_horiz(k2).point2 ];
+xy_left = [ lines_horiz(k1).point1 lines_horiz(k2).point1 ];
+xy_right = [ lines_horiz(k1).point1 lines_horiz(k2).point1 ];
 %draw lines
 line(xy_bot(:,1),xy_bot(:,2),'LineWidth',2,'Color','r');
 line(xy_top(:,1),xy_top(:,2),'LineWidth',2,'Color','r');
-line(xy_left(:,1),xy_left(:,2),'LineWidth',2,'Color','r');
-line(xy_right(:,1),xy_right(:,2),'LineWidth',2,'Color','r');
-
-%see if ball landed inside or ourside of the court
-
 
 %% Play the video to the user
 videoReader = vision.VideoFileReader(video_file);
