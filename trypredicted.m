@@ -10,7 +10,7 @@ disp("Getting Candidates from video (Please Wait)...");
 videoReader = vision.VideoFileReader(video_file);
 videoPlayer = vision.VideoPlayer('Name', 'Candidate and Event Detection');
 videoPlayer.Position(1:4) = [0 0 500 500];
-position=[0 0 0 0 0];%Trajectory position
+position=[0 0 0 0 0 0]; %Trajectory position
 frames = 1;
 while ~isDone(videoReader)
     frame=step(videoReader);
@@ -41,7 +41,6 @@ while ~isDone(videoReader)
     FG_layer2 =imerode(FG_layer2 ,strel('disk',2));
     FG_layer2 =imdilate(FG_layer2 ,strel('disk',6));
     
-    
     [BW,frame_rgbSegmented] = createMasknew2(frame);
     FG_segment = im2bw(rgb2gray(frame_rgbSegmented));
     FG_segment(1:160,:)=0;
@@ -62,12 +61,13 @@ while ~isDone(videoReader)
     [l2row,l2col]=size(posil2);
     
     if posi(1,1)~=0
-        p = zeros(1,5);
+        p = zeros(1,6);
         if length(posi(:,1)) > 1
            disp(length(posi(:,1)) + " objects detected on: " + frames); 
         end
         p(1:4) = posi(1,:);
         p(5) = frames;
+        p(6) = 0;
         position=cat(1,position,p);
     else
         for j=1:l2row
@@ -77,9 +77,10 @@ while ~isDone(videoReader)
             ydirl2 = posil2(j,1)+(posil2(j,3)/2);
             r=sqrt((xdir-xdirl2).^2+(ydir-ydirl2).^2);
             if r<60
-                p = zeros(1,5);
+                p = zeros(1,6);
                 p(1:4) = posil2(j,:);
                 p(5) = frames;
+                p(6) = 1;
                 position=cat(1,position,p);
                 vid=predicted(posil2(j,:),frame);
             end
@@ -90,7 +91,7 @@ while ~isDone(videoReader)
 end
 release(videoPlayer);
 position = position(2:length(position),:);
-%% Step 5 - Find Events
+%% Step 4 - Find Events
 disp("Finding all events from candidates...");
 t = position(:,5);
 x = position(:,1) + position(:,3)/2;
@@ -184,7 +185,7 @@ figure, scatter3(x,y,t,'filled'), view(-30,10), title("Ball position vs. frame")
 
 showTrajectory(BG,position,events);
 
-%% Step 6 - Use last event to determine score accross frames
+%% Step 5 - Use last event to determine score accross frames
 disp("Applying tennis rules to events...");
 prev = getCandidate(position,events(length(events)-1));
 last = getCandidate(position,events(length(events)));
@@ -195,14 +196,87 @@ v = (p2-p1)/dt;
 %determine the player based on direction of the ball's movement between the
 %last and 2nd last frames
 player = 0;
-if v(1) > 0
-   player = 1;
-elseif v(1) < 0
-    player = 2;
+if v(1) < 0
+   player = 1; %player 1 is the bottom player
+elseif v(1) > 0
+    player = 2; %player 2 is the top player
 end
-disp(v);
+disp(player);
+
 %determine if the ball was in-bounds on the last hit
 
+%get frame from last event and find court lines by colour segmentation and hough
+videoReader = VideoReader(video_file); 
+frame = read(videoReader,last(5));
+%properties of frame
+[HEIGHT,WIDTH] = size(frame);
+%colour segment frame
+frame_segmented = createMaskWhite(frame);
+frame_segmented(1:180,:)=0;
+frame_segmented(900:1080,:)=0;
+frame_segmented(:,1:250)=0;
+frame_segmented(:,1650:1920)=0;
+%apply closing
+f2 = imclose(frame_segmented, strel('rectangle',[6 6]));
+f_left = imopen(f2, strel('line',100,60));
+f_right = imopen(f2, strel('line',100,-60));
+f_horiz = imopen(f2, strel('line',100,180));
+%detect edges
+E_left = f_left; %edge(f_left,'Canny');
+E_right = f_right; 
+E_horiz = f_horiz;
+%Hough
+[H_left,T_left,R_left] = hough(E_left);
+[H_right,T_right,R_right] = hough(E_right);
+[H_horiz,T_horiz,R_horiz] = hough(E_horiz);
+%Hough Peaks
+peaks_left = houghpeaks(H_left,25,'Threshold',300); % num peaks <= 50
+peaks_right = houghpeaks(H_right,25,'Threshold',300); % num peaks <= 50
+peaks_horiz = houghpeaks(H_horiz,25,'Threshold',300); % num peaks <= 50
+%Hough Lines
+lines_left = houghlines(E_left,T_left,R_left,peaks_left,'FillGap',5,'MinLength',100);
+lines_right = houghlines(E_right,T_right,R_right,peaks_right,'FillGap',5,'MinLength',100);
+lines_horiz = houghlines(E_horiz,T_horiz,R_horiz,peaks_horiz,'FillGap',5,'MinLength',100);
+%draw detected left line
+figure, imshow(f_left,[]);
+k = length(lines_left(:));
+xy_left = [ lines_left(k).point1; lines_left(k).point2 ];
+line(xy_left(:,1),xy_left(:,2),'LineWidth',2,'Color','r');
+%draw detected right line
+figure, imshow(f_right,[]);
+k = length(lines_right(:));
+xy_right = [ lines_right(k).point1; lines_right(k).point2 ];
+line(xy_right(:,1),xy_right(:,2),'LineWidth',2,'Color','r');
+%draw detected horiz line
+figure, imshow(f_horiz,[]);
+max_x = 0;  min_x = HEIGHT;
+max_y = 0;  min_y = WIDTH;
+for k = 1:length(lines_horiz)
+    %Point 1, x
+    if lines_horiz(k).point1(1) > max_x
+        max_x = lines_horiz(k).point1(1);
+    elseif lines_horiz(k).point1(1) < min_x
+        min_x = lines_horiz(k).point1(2);
+    %Point 1, y
+    elseif lines_horiz(k).point1(2) > max_y
+        max_y = lines_horiz(k).point1(2);
+    elseif lines_horiz(k).point1(2) < min_y
+        min_y = lines_horiz(k).point1(2);
+    %Point 2, x
+    end
+    if lines_horiz(k).point2(1) > max_x
+        max_x = lines_horiz(k).point2(1);
+    elseif lines_horiz(k).point2(1) < min_x
+        min_x = lines_horiz(k).point2(2);
+    %Point 2, y
+    elseif lines_horiz(k).point2(2) > max_y
+        max_y = lines_horiz(k).point2(2);
+    elseif lines_horiz(k).point2(2) < min_y
+        min_y = lines_horiz(k).point2(2);
+    end
+end
+xy_horiz = [ lines_horiz(k).point1; lines_horiz(k).point2 ];
+line(xy_horiz(:,1),xy_horiz(:,2),'LineWidth',2,'Color','r');
 
 %% Play the video to the user
 videoReader = vision.VideoFileReader(video_file);
@@ -219,7 +293,13 @@ while ~isDone(videoReader)
     %Show the bounding box around the ball
     candidates = getCandidate(position,i);
     if length(candidates(:,1)) > 0
-        result=insertShape(result, 'Rectangle',candidates(:,1:4), 'Color', 'red');
+        for j = 1:1:length(candidates)
+            if candidates(j,6) == 0
+                result = insertShape(result, 'Rectangle', candidates(:,1:4), 'Color', 'red');
+            else
+                result = insertShape(result, 'Rectangle', candidates(:,1:4), 'Color', 'blue');
+            end
+        end
     end
     
     event = getEvent(events,i);
