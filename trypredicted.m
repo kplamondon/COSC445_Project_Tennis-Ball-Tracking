@@ -1,7 +1,7 @@
 %% Clear Memory 
 clc;
 clear;
-video_file = 'Test2.mp4';
+video_file = 'assets/video_3/video3.mp4';
 %% Step 1 - Get Background image 
 disp("Getting Background Image (Please Wait)...");
 BG=GetBackground(video_file,390);%video name and number of frame   really slow!!!!
@@ -183,15 +183,30 @@ showTrajectory(BG,position,events);
 
 %% Step 6 - Use last event to determine score accross frames
 disp("Applying tennis rules to events...");
-
+prev = getCandidate(position,events(length(events)-1));
+last = getCandidate(position,events(length(events)));
+p1 = [prev(2) + prev(4)/2, prev(1) + prev(3)/2];
+p2 = [last(2) + last(4)/2, last(1) + last(3)/2];
+dt = last(5) - prev(5);
+v = (p2-p1)/dt;
+%determine the player based on direction of the ball's movement between the
+%last and 2nd last frames
+player = 0;
+if v(1) > 0
+   player = 1;
+elseif v(1) < 0
+    player = 2;
+end
+disp(v);
+%determine if the ball was in-bounds on the last hit
 
 
 %% Play the video to the user
 videoReader = vision.VideoFileReader(video_file);
 videoPlayer = vision.VideoPlayer('Name', 'Candidate and Event Detection');
 videoPlayer.Position(1:4) = [0 0 500 500];
-videoWriter = VideoWriter('output.avi');
-open(videoWriter);
+%videoWriter = VideoWriter('output.avi');
+%open(videoWriter);
 i = 1;
 
 while ~isDone(videoReader)
@@ -209,12 +224,14 @@ while ~isDone(videoReader)
         result=insertShape(result, 'Rectangle',candidates(:,1:4), 'Color', 'green');
     end
     
+    insertShape(result,'Line',[950 0 0 WIDTH], 'Color', 'blue');
+    
     step(videoPlayer,result);
-    writeVideo(videoWriter,result);
+    %writeVideo(videoWriter,result);
     i = i + 1;
 end
 release(videoPlayer);
-close(videoWriter);
+%close(videoWriter);
 
 
 %% Functions

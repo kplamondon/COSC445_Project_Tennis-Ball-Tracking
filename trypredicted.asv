@@ -182,8 +182,10 @@ figure, scatter3(x,y,t,'filled'), view(-30,10), title("Ball position vs. frame")
 showTrajectory(BG,position,events);
 
 %% Step 6 - Use last event to determine score accross frames
-disp("Determining 
-
+disp("Applying tennis rules to events...");
+prev = getCandidate(position,events(length(events)-1));
+last = getCandidate(position,events(length(events)));
+p1 = [prev(2) + prev(4)/2, pr
 
 %% Play the video to the user
 videoReader = vision.VideoFileReader(video_file);
