@@ -8,6 +8,8 @@ BG=GetBackground(video_file,390);%video name and number of frame   really slow!!
 %% Step 2 & 3 - Detect Candidates & Predict Missing Candidates
 disp("Getting Candidates from video (Please Wait)...");
 videoReader = vision.VideoFileReader(video_file);
+videoPlayer = vision.VideoPlayer('Name', 'Candidate and Event Detection');
+videoPlayer.Position(1:4) = [0 0 500 500];
 position=[0 0 0 0 0];%Trajectory position
 frames = 1;
 while ~isDone(videoReader)
@@ -83,8 +85,10 @@ while ~isDone(videoReader)
             end
         end
     end
+    step(videoPlayer,vid);
     frames = frames + 1;
 end
+release(videoPlayer);
 position = position(2:length(position),:);
 %% Step 5 - Find Events
 disp("Finding all events from candidates...");
@@ -103,7 +107,6 @@ for i=3:1:length(x)
     else
         acc = cat(1,acc,a);
     end
-    
     if a(2) > 20 || a(2) < -28
         if length(events) == 0
             events = t(i);
@@ -224,7 +227,7 @@ while ~isDone(videoReader)
         result=insertShape(result, 'Rectangle',candidates(:,1:4), 'Color', 'green');
     end
     
-    insertShape(result,'Line',[950 0 0 WIDTH], 'Color', 'blue');
+    insertShape(result,'Line',[950 0 0 WIDTH], 'Color', 'blue'); %Finding the values of the net
     
     step(videoPlayer,result);
     %writeVideo(videoWriter,result);
